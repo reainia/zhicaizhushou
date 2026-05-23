@@ -41,6 +41,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '预算管理', requiresAuth: true }
       },
       {
+        path: 'social-gifts',
+        name: 'SocialGifts',
+        component: () => import('../views/SocialGift.vue'),
+        meta: { title: '人情账单', requiresAuth: true }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/Profile.vue'),

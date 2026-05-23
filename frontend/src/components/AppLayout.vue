@@ -70,6 +70,7 @@ import {
   DashboardOutlined,
   OrderedListOutlined,
   PieChartOutlined,
+  GiftOutlined,
   UserOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -88,6 +89,7 @@ const navItems = [
   { path: '/dashboard', label: '仪表盘', icon: DashboardOutlined },
   { path: '/transactions', label: '交易记录', icon: OrderedListOutlined },
   { path: '/budget', label: '预算管理', icon: PieChartOutlined },
+  { path: '/social-gifts', label: '人情账单', icon: GiftOutlined },
   { path: '/profile', label: '个人信息', icon: UserOutlined }
 ]
 
