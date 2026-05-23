@@ -29,6 +29,7 @@ export interface DashboardSummary {
   balance: number
   categoryStats: CategoryStat[]
   monthlyTrend: MonthlyTrend[]
+  recentTransactions?: Transaction[]
 }
 
 export const transactionApi = {

@@ -373,7 +373,7 @@ onMounted(async () => {
   try {
     const res = await transactionApi.getDashboard()
     summary.value = res.data
-    recentTransactions.value = []
+    recentTransactions.value = res.data.recentTransactions || []
   } catch {
     // 使用模拟数据
     summary.value = {

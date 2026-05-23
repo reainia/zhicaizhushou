@@ -12,11 +12,11 @@
       </div>
     </div>
 
-    <!-- 月度预算设置 -->
+    <!-- 月度总预算 -->
     <div class="budget-card">
       <div class="card-header">
         <SettingOutlined class="card-header-icon" />
-        <span>月度预算设置</span>
+        <span>月度总预算</span>
       </div>
       <div class="card-body">
         <a-row :gutter="24" align="middle">
@@ -24,14 +24,14 @@
             <div class="budget-input-group">
               <label class="budget-label">月度总预算 (元)</label>
               <a-input-number
-                v-model:value="budgetLimit"
+                v-model:value="overallBudget"
                 :min="0"
                 :max="99999999"
                 :formatter="(value: any) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
                 :parser="(value: any) => value.replace(/,/g, '')"
                 size="large"
                 class="budget-number-input"
-                placeholder="请输入月度预算"
+                placeholder="请输入月度总预算"
               />
             </div>
           </a-col>
@@ -39,7 +39,7 @@
             <div class="budget-input-group">
               <label class="budget-label">本月已支出</label>
               <div class="expense-display">
-                <span class="expense-amount">¥{{ totalExpense.toLocaleString() }}</span>
+                <span class="expense-amount">¥{{ summary.totalExpense.toLocaleString() }}</span>
               </div>
             </div>
           </a-col>
@@ -48,7 +48,7 @@
               <label class="budget-label">剩余预算</label>
               <div class="remaining-display">
                 <span class="remaining-amount" :class="remainingClass">
-                  ¥{{ Math.max(0, (budgetLimit || 0) - totalExpense).toLocaleString() }}
+                  ¥{{ Math.max(0, (overallBudget || 0) - summary.totalExpense).toLocaleString() }}
                 </span>
               </div>
             </div>
@@ -61,11 +61,11 @@
               <div class="progress-header">
                 <span class="progress-label">预算使用进度</span>
                 <span class="progress-percentage" :style="{ color: progressColor }">
-                  {{ budgetLimit ? Math.min(100, Math.round((totalExpense / budgetLimit) * 100)) : 0 }}%
+                  {{ overallBudget ? Math.min(100, Math.round((summary.totalExpense / overallBudget) * 100)) : 0 }}%
                 </span>
               </div>
               <a-progress
-                :percent="budgetLimit ? Math.min(100, Math.round((totalExpense / budgetLimit) * 100)) : 0"
+                :percent="overallBudget ? Math.min(100, Math.round((summary.totalExpense / overallBudget) * 100)) : 0"
                 :stroke-color="progressColor"
                 :stroke-width="12"
                 :show-info="false"
@@ -77,8 +77,8 @@
 
         <a-row :gutter="24" class="mt-4">
           <a-col :span="24">
-            <a-button type="primary" size="large" class="save-budget-btn" @click="saveBudget">
-              保存预算设置
+            <a-button type="primary" size="large" class="save-budget-btn" :loading="saving" @click="saveOverallBudget">
+              保存总预算
             </a-button>
           </a-col>
         </a-row>
@@ -89,7 +89,10 @@
     <div class="budget-card">
       <div class="card-header">
         <PieChartOutlined class="card-header-icon" />
-        <span>分类预算对比</span>
+        <span>分类预算</span>
+        <a-button type="link" size="small" class="add-category-btn" @click="showAddCategory = true">
+          <PlusOutlined /> 添加分类
+        </a-button>
       </div>
       <div class="card-body">
         <a-table
@@ -108,7 +111,14 @@
               <span class="category-name">{{ record.category }}</span>
             </template>
             <template v-if="column.key === 'budget'">
-              <span class="amount-text">¥{{ record.budget.toLocaleString() }}</span>
+              <a-input-number
+                v-model:value="record.budget"
+                :min="0"
+                :max="99999999"
+                size="small"
+                class="budget-edit-input"
+                placeholder="预算"
+              />
             </template>
             <template v-if="column.key === 'actual'">
               <span class="amount-text">¥{{ record.actual.toLocaleString() }}</span>
@@ -127,56 +137,129 @@
                 </span>
               </div>
             </template>
+            <template v-if="column.key === 'action'">
+              <a-button type="link" danger size="small" @click="removeCategory(record)">
+                <DeleteOutlined />
+              </a-button>
+            </template>
+          </template>
+
+          <template #emptyText>
+            <div class="empty-state">
+              <p class="empty-text">暂无分类预算</p>
+              <p class="empty-hint">点击「添加分类」为各支出类别设定预算</p>
+            </div>
           </template>
         </a-table>
+
+        <!-- 添加分类行 -->
+        <div v-if="showAddCategory" class="add-category-row">
+          <a-select
+            v-model:value="newCategory"
+            size="large"
+            class="category-select"
+            placeholder="选择支出分类"
+          >
+            <a-select-option
+              v-for="cat in availableCategories"
+              :key="cat.value"
+              :value="cat.value"
+            >
+              {{ cat.label }}
+            </a-select-option>
+          </a-select>
+          <a-input-number
+            v-model:value="newBudgetAmount"
+            :min="0"
+            size="large"
+            class="budget-amount-input"
+            placeholder="预算金额"
+          />
+          <a-space>
+            <a-button type="primary" size="large" @click="addCategory">确定</a-button>
+            <a-button size="large" @click="cancelAddCategory">取消</a-button>
+          </a-space>
+        </div>
+
+        <div class="save-category-area">
+          <a-button type="primary" size="large" class="save-budget-btn" :loading="saving" @click="saveCategoryBudgets">
+            保存分类预算
+          </a-button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { DollarOutlined, SettingOutlined, PieChartOutlined } from '@ant-design/icons-vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { DollarOutlined, SettingOutlined, PieChartOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import { budgetApi, type BudgetConfig } from '../api/budget'
+import dayjs from 'dayjs'
 
 const loading = ref(false)
-const budgetLimit = ref<number>(5000)
-const totalExpense = ref<number>(0)
+const saving = ref(false)
 
-interface CategoryBudget {
+// 总预算
+const overallBudget = ref<number>(0)
+let overallBudgetId: number | null = null
+
+// 预算汇总数据
+const summary = reactive({
+  totalExpense: 0,
+  categoryActuals: [] as { category: string; amount: number }[]
+})
+
+interface CategoryBudgetItem {
+  id: number | null  // BudgetConfig.id
   key: string
   category: string
   budget: number
   actual: number
 }
 
-const categoryBudgets = ref<CategoryBudget[]>([
-  { key: '1', category: '餐饮', budget: 1500, actual: 1200 },
-  { key: '2', category: '交通', budget: 500, actual: 350 },
-  { key: '3', category: '购物', budget: 1000, actual: 850 },
-  { key: '4', category: '住房', budget: 2000, actual: 2000 },
-  { key: '5', category: '娱乐', budget: 500, actual: 200 },
-  { key: '6', category: '其他', budget: 500, actual: 100 }
-])
+const categoryBudgets = ref<CategoryBudgetItem[]>([])
+
+// 添加分类相关
+const showAddCategory = ref(false)
+const newCategory = ref<string>('')
+const newBudgetAmount = ref<number>(0)
+
+const allCategories = [
+  { value: '餐饮', label: '餐饮' },
+  { value: '交通', label: '交通' },
+  { value: '购物', label: '购物' },
+  { value: '住房', label: '住房' },
+  { value: '娱乐', label: '娱乐' },
+  { value: '工资', label: '工资' },
+  { value: '其他', label: '其他' }
+]
+
+const availableCategories = computed(() => {
+  const used = new Set(categoryBudgets.value.map(c => c.category))
+  return allCategories.filter(c => !used.has(c.value))
+})
 
 const columns = [
   { title: '支出分类', dataIndex: 'category', key: 'category' },
   { title: '预算金额', dataIndex: 'budget', key: 'budget' },
   { title: '实际支出', dataIndex: 'actual', key: 'actual' },
-  { title: '使用进度', dataIndex: 'progress', key: 'progress' }
+  { title: '使用进度', dataIndex: 'progress', key: 'progress' },
+  { title: '操作', dataIndex: 'action', key: 'action', width: 60 }
 ]
 
 const progressColor = computed(() => {
-  if (!budgetLimit.value) return '#10b981'
-  const ratio = totalExpense.value / budgetLimit.value
+  if (!overallBudget.value) return '#10b981'
+  const ratio = summary.totalExpense / overallBudget.value
   if (ratio < 0.5) return '#10b981'
   if (ratio < 0.8) return '#f59e0b'
   return '#ef4444'
 })
 
 const remainingClass = computed(() => {
-  if (!budgetLimit.value) return ''
-  const ratio = totalExpense.value / budgetLimit.value
+  if (!overallBudget.value) return ''
+  const ratio = summary.totalExpense / overallBudget.value
   if (ratio >= 0.8) return 'text-danger'
   if (ratio >= 0.5) return 'text-warning'
   return 'text-safe'
@@ -188,20 +271,151 @@ function getProgressColor(ratio: number): string {
   return '#ef4444'
 }
 
-onMounted(() => {
-  // 从 localStorage 恢复预算设置
-  const savedBudget = localStorage.getItem('monthlyBudget')
-  if (savedBudget) {
-    budgetLimit.value = Number(savedBudget)
-  }
+function getActualForCategory(category: string): number {
+  const item = summary.categoryActuals.find(a => a.category === category)
+  return item ? item.amount : 0
+}
 
-  // 计算总支出
-  totalExpense.value = categoryBudgets.value.reduce((sum, item) => sum + item.actual, 0)
+async function loadBudgetData() {
+  loading.value = true
+  try {
+    const now = dayjs()
+    const res = await budgetApi.getSummary({
+      month: now.month() + 1,
+      year: now.year()
+    })
+    
+    summary.totalExpense = res.data.totalExpense
+    summary.categoryActuals = res.data.categoryActuals
+
+    // 解析总预算
+    overallBudgetId = null
+    overallBudget.value = 0
+    const items: CategoryBudgetItem[] = []
+
+    for (const b of res.data.budgets) {
+      if (b.category === null) {
+        overallBudget.value = b.amount
+        overallBudgetId = b.id
+      } else {
+        items.push({
+          id: b.id,
+          key: String(b.id || b.category),
+          category: b.category,
+          budget: b.amount,
+          actual: getActualForCategory(b.category)
+        })
+      }
+    }
+
+    // 补充有实际支出但没有预算的分类
+    for (const actual of res.data.categoryActuals) {
+      if (!items.find(i => i.category === actual.category)) {
+        items.push({
+          id: null,
+          key: 'new-' + actual.category,
+          category: actual.category,
+          budget: 0,
+          actual: actual.amount
+        })
+      }
+    }
+
+    categoryBudgets.value = items
+  } catch (error: any) {
+    const msg = error?.response?.data?.message || error?.message || '加载预算数据失败'
+    message.error(msg)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadBudgetData()
 })
 
-function saveBudget() {
-  localStorage.setItem('monthlyBudget', String(budgetLimit.value))
-  message.success('预算设置已保存！')
+// 保存总预算
+async function saveOverallBudget() {
+  saving.value = true
+  try {
+    const now = dayjs()
+    const res = await budgetApi.save({
+      id: overallBudgetId,
+      category: null,
+      amount: overallBudget.value,
+      month: now.month() + 1,
+      year: now.year()
+    })
+    overallBudgetId = res.data.id
+    message.success('总预算已保存！')
+  } catch (error: any) {
+    const msg = error?.response?.data?.message || error?.message || '保存失败'
+    message.error(msg)
+  } finally {
+    saving.value = false
+  }
+}
+
+// 添加分类预算
+function addCategory() {
+  if (!newCategory.value) {
+    message.warning('请选择支出分类')
+    return
+  }
+  if (newBudgetAmount.value <= 0) {
+    message.warning('请输入预算金额')
+    return
+  }
+  categoryBudgets.value.push({
+    id: null,
+    key: 'new-' + newCategory.value,
+    category: newCategory.value,
+    budget: newBudgetAmount.value,
+    actual: getActualForCategory(newCategory.value)
+  })
+  newCategory.value = ''
+  newBudgetAmount.value = 0
+  showAddCategory.value = false
+}
+
+function cancelAddCategory() {
+  showAddCategory.value = false
+  newCategory.value = ''
+  newBudgetAmount.value = 0
+}
+
+function removeCategory(record: CategoryBudgetItem) {
+  categoryBudgets.value = categoryBudgets.value.filter(c => c.key !== record.key)
+}
+
+// 保存分类预算
+async function saveCategoryBudgets() {
+  saving.value = true
+  try {
+    const now = dayjs()
+    for (const item of categoryBudgets.value) {
+      if (item.budget > 0) {
+        await budgetApi.save({
+          id: item.id,
+          category: item.category,
+          amount: item.budget,
+          month: now.month() + 1,
+          year: now.year()
+        })
+      } else if (item.id !== null) {
+        // 预算为 0 且已有记录，删除
+        await budgetApi.delete(item.id)
+      }
+    }
+    message.success('分类预算已保存！')
+    // 刷新数据以获取最新 id
+    await loadBudgetData()
+  } catch (error: any) {
+    const msg = error?.response?.data?.message || error?.message || '保存失败'
+    message.error(msg)
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -272,6 +486,12 @@ function saveBudget() {
 .card-header-icon {
   color: #10b981;
   font-size: 18px;
+}
+
+.add-category-btn {
+  margin-left: auto;
+  color: #10b981 !important;
+  font-size: 13px;
 }
 
 .card-body {
@@ -441,5 +661,60 @@ function saveBudget() {
   font-size: 13px;
   font-weight: 600;
   color: #64748b;
+}
+
+.budget-edit-input {
+  width: 120px !important;
+  border-radius: 8px !important;
+}
+
+.budget-edit-input :deep(.ant-input-number-input) {
+  border-radius: 8px !important;
+  height: 36px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.add-category-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 16px;
+}
+
+.category-select {
+  width: 200px !important;
+  border-radius: 10px !important;
+}
+
+.budget-amount-input {
+  width: 180px !important;
+  border-radius: 10px !important;
+}
+
+.save-category-area {
+  padding-top: 20px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 16px;
+}
+
+.empty-state {
+  padding: 32px 0;
+  text-align: center;
+}
+
+.empty-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+  margin: 0 0 4px;
+}
+
+.empty-hint {
+  font-size: 13px;
+  color: #cbd5e1;
+  margin: 0;
 }
 </style>

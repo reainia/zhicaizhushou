@@ -1,6 +1,7 @@
 package com.smartfinance.controller;
 
 import com.smartfinance.dto.DashboardResponse;
+import com.smartfinance.entity.Transaction;
 import com.smartfinance.entity.User;
 import com.smartfinance.repository.TransactionRepository;
 import com.smartfinance.repository.UserRepository;
@@ -79,7 +80,12 @@ public class DashboardController {
                 monthlyTrend.add(new DashboardResponse.MonthlyTrend(month, income, expense));
             }
 
-            DashboardResponse response = new DashboardResponse(totalIncome, totalExpense, balance, categoryStats, monthlyTrend);
+            DashboardResponse response = new DashboardResponse(totalIncome, totalExpense, balance, categoryStats, monthlyTrend, null);
+
+            // 最近5条交易记录
+            List<Transaction> recentTransactions = transactionRepository.findTop5ByUserIdOrderByTransactionDateDesc(user.getId());
+            response.setRecentTransactions(recentTransactions);
+
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(e.getMessage());

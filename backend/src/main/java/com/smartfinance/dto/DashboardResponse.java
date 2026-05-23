@@ -1,5 +1,6 @@
 package com.smartfinance.dto;
 
+import com.smartfinance.entity.Transaction;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,6 +17,7 @@ public class DashboardResponse {
     private BigDecimal balance;
     private List<CategoryStat> categoryStats;
     private List<MonthlyTrend> monthlyTrend;
+    private List<Transaction> recentTransactions;
 
     @Data
     @AllArgsConstructor

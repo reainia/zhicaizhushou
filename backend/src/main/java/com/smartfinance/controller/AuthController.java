@@ -2,6 +2,7 @@ package com.smartfinance.controller;
 
 import com.smartfinance.dto.AuthRequest;
 import com.smartfinance.dto.AuthResponse;
+import com.smartfinance.dto.UpdateProfileRequest;
 import com.smartfinance.entity.User;
 import com.smartfinance.repository.UserRepository;
 import com.smartfinance.util.JwtUtil;
@@ -28,15 +29,32 @@ public class AuthController {
     private JwtUtil jwtUtil;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
-        if (userRepository.existsByEmail(user.getEmail())) {
+    public ResponseEntity<?> register(@RequestBody AuthRequest request) {
+        if (request.getEmail() == null || request.getEmail().isEmpty()) {
+            return ResponseEntity.badRequest().body("邮箱不能为空");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
             return ResponseEntity.badRequest().body("邮箱已被注册");
         }
-        user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
+        
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-        return ResponseEntity.ok("注册成功");
+        
+        // 注册成功后自动登录，返回 token
+        String token = jwtUtil.generateToken(user.getEmail());
+        AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
+            user.getId(),
+            user.getUsername(),
+            user.getEmail(),
+            user.getAvatarUrl(),
+            user.getCreatedAt()
+        );
+        return ResponseEntity.ok(new AuthResponse(token, userInfo));
     }
 
     @PostMapping("/login")
@@ -57,20 +75,21 @@ public class AuthController {
             user.getId(),
             user.getUsername(),
             user.getEmail(),
-            user.getAvatarUrl()
+            user.getAvatarUrl(),
+            user.getCreatedAt()
         );
         
         return ResponseEntity.ok(new AuthResponse(token, userInfo));
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> getProfile(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).body("未提供令牌");
         }
         
         String token = authHeader.substring(7);
-        String email = jwtUtil.extractEmail(token); // 需要在 JwtUtil 中增加公开方法
+        String email = jwtUtil.extractEmail(token);
         
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
@@ -80,7 +99,46 @@ public class AuthController {
         profile.put("username", user.getUsername());
         profile.put("email", user.getEmail());
         profile.put("avatarUrl", user.getAvatarUrl());
+        profile.put("createdAt", user.getCreatedAt());
         
         return ResponseEntity.ok(profile);
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody UpdateProfileRequest request) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("未提供令牌");
+            }
+            
+            String token = authHeader.substring(7);
+            String email = jwtUtil.extractEmail(token);
+            
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("用户不存在"));
+            
+            if (request.getUsername() != null && !request.getUsername().isEmpty()) {
+                user.setUsername(request.getUsername());
+            }
+            if (request.getEmail() != null && !request.getEmail().isEmpty()) {
+                user.setEmail(request.getEmail());
+            }
+            user.setUpdatedAt(LocalDateTime.now());
+            
+            userRepository.save(user);
+            
+            Map<String, Object> profile = new HashMap<>();
+            profile.put("id", user.getId());
+            profile.put("username", user.getUsername());
+            profile.put("email", user.getEmail());
+            profile.put("avatarUrl", user.getAvatarUrl());
+            profile.put("createdAt", user.getCreatedAt());
+            
+            return ResponseEntity.ok(profile);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(401).body(e.getMessage());
+        }
     }
 }
