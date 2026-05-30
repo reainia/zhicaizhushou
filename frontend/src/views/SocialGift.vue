@@ -441,8 +441,8 @@ function openEditModal(record: SocialGift) {
 async function handleSubmit() {
   submitting.value = true
   try {
-    const data = {
-      direction: formState.direction,
+    const data: { direction: 'GIVE' | 'RECEIVE'; eventType: string; personName: string; amount: number; eventDate: string; description: string } = {
+      direction: formState.direction as 'GIVE' | 'RECEIVE',
       eventType: formState.eventType,
       personName: formState.personName,
       amount: formState.amount!,

@@ -145,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import {
   ArrowUpOutlined,
@@ -158,7 +158,6 @@ import {
   PieChartOutlined,
   LineChartOutlined
 } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 import { transactionApi } from '../api/transaction'
 import type { DashboardSummary, Transaction, CategoryStat, MonthlyTrend } from '../api/transaction'
 

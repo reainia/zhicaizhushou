@@ -360,9 +360,9 @@ function openEditModal(record: Transaction) {
 async function handleSubmit() {
   submitting.value = true
   try {
-    const data = {
+    const data: { amount: number; type: 'EXPENSE' | 'INCOME'; category: string; transactionDate: string; description: string } = {
       amount: formState.amount!,
-      type: formState.type,
+      type: formState.type as 'EXPENSE' | 'INCOME',
       category: formState.category,
       transactionDate: formState.transactionDate!.format('YYYY-MM-DD'),
       description: formState.description

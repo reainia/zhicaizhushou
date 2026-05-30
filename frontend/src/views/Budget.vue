@@ -195,7 +195,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { DollarOutlined, SettingOutlined, PieChartOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { budgetApi, type BudgetConfig } from '../api/budget'
+import { budgetApi } from '../api/budget'
 import dayjs from 'dayjs'
 
 const loading = ref(false)

@@ -61,6 +61,9 @@
       </div>
     </div>
   </div>
+
+  <!-- AI 客服聊天组件 -->
+  <chat-widget server-url="http://localhost:8005" title="AI 客服助手"></chat-widget>
 </template>
 
 <script setup lang="ts">

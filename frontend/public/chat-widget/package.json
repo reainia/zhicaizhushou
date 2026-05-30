@@ -1,0 +1,11 @@
+{
+  "name": "chat-widget",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI 客服聊天组件 - Web Component",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'No build step needed - vanilla Web Component'"
+  }
+}

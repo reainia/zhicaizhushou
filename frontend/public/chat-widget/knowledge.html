@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>知识库管理 - AI 客服系统</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    /* ===== Navbar ===== */
+    .navbar {
+      background: #fff;
+      border-bottom: 1px solid #e8e8e8;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .navbar-brand {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a1a1a;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .navbar-brand .logo {
+      width: 28px;
+      height: 28px;
+      background: #1677ff;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .navbar-links {
+      display: flex;
+      gap: 16px;
+    }
+    .navbar-links a {
+      color: #666;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .navbar-links a:hover {
+      background: #f5f5f5;
+      color: #1677ff;
+    }
+    .navbar-links a.active {
+      color: #1677ff;
+      background: #e6f4ff;
+    }
+
+    /* ===== Container ===== */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* ===== Page Header ===== */
+    .page-header {
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: 24px;
+      color: #1a1a1a;
+    }
+    .page-header p {
+      font-size: 14px;
+      color: #999;
+      margin-top: 6px;
+    }
+
+    /* ===== Upload Zone ===== */
+    .upload-zone {
+      background: #fff;
+      border: 2px dashed #d9d9d9;
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s;
+      margin-bottom: 28px;
+    }
+    .upload-zone:hover {
+      border-color: #1677ff;
+      background: #fafaff;
+    }
+    .upload-zone.dragover {
+      border-color: #1677ff;
+      background: #e6f4ff;
+    }
+    .upload-zone .icon {
+      font-size: 40px;
+      color: #1677ff;
+      margin-bottom: 12px;
+    }
+    .upload-zone .text {
+      font-size: 15px;
+      color: #666;
+    }
+    .upload-zone .text strong {
+      color: #1677ff;
+    }
+    .upload-zone .hint {
+      font-size: 13px;
+      color: #bbb;
+      margin-top: 8px;
+    }
+    .upload-zone .hint span {
+      display: inline-block;
+      background: #f5f5f5;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin: 2px 3px;
+      font-size: 12px;
+      color: #888;
+    }
+
+    /* ===== Upload Status ===== */
+    .upload-status {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+    .upload-status.show {
+      display: block;
+    }
+    .upload-status.loading {
+      background: #fffbe6;
+      border: 1px solid #ffe58f;
+      color: #d48806;
+    }
+    .upload-status.success {
+      background: #f6ffed;
+      border: 1px solid #b7eb8f;
+      color: #389e0d;
+    }
+    .upload-status.error {
+      background: #fff2f0;
+      border: 1px solid #ffccc7;
+      color: #cf1322;
+    }
+
+    /* ===== Document List ===== */
+    .doc-section {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      overflow: hidden;
+    }
+    .doc-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .doc-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+    .doc-header .count {
+      font-size: 13px;
+      color: #999;
+      font-weight: 400;
+    }
+    .doc-list {
+      list-style: none;
+    }
+    .doc-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid #f5f5f5;
+      transition: background 0.15s;
+    }
+    .doc-item:last-child {
+      border-bottom: none;
+    }
+    .doc-item:hover {
+      background: #fafafa;
+    }
+    .doc-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      margin-right: 14px;
+      flex-shrink: 0;
+    }
+    .doc-icon.pdf { background: #fff1f0; color: #f5222d; }
+    .doc-icon.docx { background: #e6f7ff; color: #1677ff; }
+    .doc-icon.txt { background: #f6ffed; color: #52c41a; }
+    .doc-icon.md { background: #f9f0ff; color: #722ed1; }
+    .doc-icon.unknown { background: #f5f5f5; color: #999; }
+
+    .doc-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .doc-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a1a1a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .doc-meta {
+      font-size: 12px;
+      color: #999;
+      margin-top: 3px;
+    }
+    .doc-meta span {
+      margin-right: 12px;
+    }
+
+    .doc-status {
+      font-size: 12px;
+      padding: 2px 10px;
+      border-radius: 10px;
+      margin-right: 14px;
+      flex-shrink: 0;
+    }
+    .doc-status.completed {
+      background: #f6ffed;
+      color: #389e0d;
+    }
+    .doc-status.processing {
+      background: #fffbe6;
+      color: #d48806;
+    }
+    .doc-status.failed {
+      background: #fff2f0;
+      color: #cf1322;
+    }
+
+    .doc-delete {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #bbb;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .doc-delete:hover {
+      background: #fff2f0;
+      color: #f5222d;
+    }
+
+    /* ===== Empty State ===== */
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+      color: #bbb;
+    }
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    /* ===== Loading Spinner ===== */
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #ffe58f;
+      border-top-color: #d48806;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ===== Modal ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.show {
+      display: flex;
+    }
+    .modal-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px 32px 24px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+    .modal-box h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #1a1a1a;
+    }
+    .modal-box p {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .modal-actions button {
+      padding: 8px 20px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .modal-actions .btn-cancel {
+      background: #f5f5f5;
+      color: #666;
+    }
+    .modal-actions .btn-cancel:hover {
+      background: #e8e8e8;
+    }
+    .modal-actions .btn-confirm {
+      background: #f5222d;
+      color: #fff;
+    }
+    .modal-actions .btn-confirm:hover {
+      background: #cf1322;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 600px) {
+      .container { padding: 20px 16px; }
+      .upload-zone { padding: 32px 16px; }
+      .doc-item { padding: 12px 16px; }
+      .navbar { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Navbar ===== -->
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <span class="logo">AI</span>
+      AI 客服系统
+    </a>
+    <div class="navbar-links">
+      <a href="/">聊天</a>
+      <a href="/knowledge.html" class="active">知识库</a>
+    </div>
+  </nav>
+
+  <!-- ===== Container ===== -->
+  <div class="container">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>知识库管理</h1>
+      <p>上传文档到知识库，AI 将基于这些文档内容回答用户问题</p>
+    </div>
+
+    <!-- Upload Status -->
+    <div id="uploadStatus" class="upload-status"></div>
+
+    <!-- Upload Zone -->
+    <div id="uploadZone" class="upload-zone">
+      <div class="icon">📂</div>
+      <div class="text">
+        点击 <strong>选择文件</strong> 或将文件拖拽到此处
+      </div>
+      <div class="hint">
+        支持 <span>PDF</span> <span>DOCX</span> <span>TXT</span> <span>MD</span>
+        格式，单文件最大 20MB
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md" style="display:none">
+
+    <!-- Document List -->
+    <div class="doc-section">
+      <div class="doc-header">
+        <h2>已上传文档 <span class="count" id="docCount"></span></h2>
+      </div>
+      <ul class="doc-list" id="docList"></ul>
+      <div class="empty-state" id="emptyState">
+        <div class="icon">📄</div>
+        <p>暂无文档，请上传文件到知识库</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== Confirm Modal ===== -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+      <h3>确认删除</h3>
+      <p id="confirmText">确定要删除该文档吗？此操作不可恢复。</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="modalCancel">取消</button>
+        <button class="btn-confirm" id="modalConfirm">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // ===== DOM refs =====
+      const uploadZone = document.getElementById('uploadZone');
+      const fileInput = document.getElementById('fileInput');
+      const uploadStatus = document.getElementById('uploadStatus');
+      const docList = document.getElementById('docList');
+      const emptyState = document.getElementById('emptyState');
+      const docCount = document.getElementById('docCount');
+      const modalOverlay = document.getElementById('confirmModal');
+      const modalText = document.getElementById('confirmText');
+      const modalCancel = document.getElementById('modalCancel');
+      const modalConfirm = document.getElementById('modalConfirm');
+
+      let pendingDeleteId = null;
+      let pendingDeleteName = '';
+
+      // ===== API Base =====
+      const API_BASE = '/api/v1/knowledge';
+
+      // ===== Helpers =====
+      function showStatus(msg, type) {
+        uploadStatus.textContent = msg;
+        uploadStatus.className = 'upload-status show ' + type;
+      }
+
+      function hideStatus() {
+        uploadStatus.className = 'upload-status';
+      }
+
+      function getFileIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const icons = { pdf: 'PDF', docx: 'DOCX', doc: 'DOC', txt: 'TXT', md: 'MD' };
+        return icons[ext] || '??';
+      }
+
+      function getFileIconClass(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const known = ['pdf', 'docx', 'doc', 'txt', 'md'];
+        return known.includes(ext) ? ext : 'unknown';
+      }
+
+      function formatTime(isoStr) {
+        try {
+          const d = new Date(isoStr);
+          const pad = n => String(n).padStart(2, '0');
+          return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+            + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        } catch {
+          return isoStr;
+        }
+      }
+
+      // ===== Load Documents =====
+      async function loadDocuments() {
+        try {
+          const res = await fetch(API_BASE + '?page=1&page_size=100');
+          if (!res.ok) throw new Error('加载失败 (' + res.status + ')');
+          const data = await res.json();
+          renderDocuments(data.items || []);
+          return data.items || [];
+        } catch (err) {
+          console.error('加载文档列表失败:', err);
+          showStatus('加载文档列表失败：' + err.message, 'error');
+          return [];
+        }
+      }
+
+      function renderDocuments(items) {
+        docList.innerHTML = '';
+        docCount.textContent = '（共 ' + items.length + ' 项）';
+
+        if (items.length === 0) {
+          emptyState.style.display = 'block';
+          return;
+        }
+        emptyState.style.display = 'none';
+
+        items.forEach(function(item) {
+          const li = document.createElement('li');
+          li.className = 'doc-item';
+
+          const iconClass = getFileIconClass(item.filename);
+          const iconLabel = getFileIcon(item.filename);
+
+          li.innerHTML =
+            '<div class="doc-icon ' + iconClass + '">' + iconLabel + '</div>'
+            + '<div class="doc-info">'
+            +   '<div class="doc-name">' + escapeHtml(item.filename) + '</div>'
+            +   '<div class="doc-meta">'
+            +     '<span>' + item.chunks_count + ' 段</span>'
+            +     '<span>' + formatTime(item.created_at) + '</span>'
+            +   '</div>'
+            + '</div>'
+            + '<span class="doc-status ' + item.status + '">' + statusLabel(item.status) + '</span>'
+            + '<button class="doc-delete" data-id="' + item.doc_id + '" data-name="' + escapeHtml(item.filename) + '" title="删除">✕</button>';
+
+          docList.appendChild(li);
+        });
+
+        // 绑定删除事件
+        docList.querySelectorAll('.doc-delete').forEach(function(btn) {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            pendingDeleteId = btn.getAttribute('data-id');
+            pendingDeleteName = btn.getAttribute('data-name');
+            modalText.textContent = '确定要删除「' + pendingDeleteName + '」吗？此操作不可恢复。';
+            modalOverlay.classList.add('show');
+          });
+        });
+      }
+
+      function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      function statusLabel(s) {
+        return { completed: '已完成', processing: '处理中', failed: '失败' }[s] || s;
+      }
+
+      // ===== Upload =====
+      async function uploadFile(file) {
+        // 验证文件类型
+        const ext = file.name.split('.').pop().toLowerCase();
+        const allowed = ['pdf', 'docx', 'doc', 'txt', 'md'];
+        if (!allowed.includes(ext)) {
+          showStatus('不支持的文件格式：.' + ext + '，支持 PDF、DOCX、TXT、MD', 'error');
+          return;
+        }
+
+        // 验证文件大小 (20MB)
+        if (file.size > 20 * 1024 * 1024) {
+          showStatus('文件过大（' + (file.size / 1024 / 1024).toFixed(1) + 'MB），最大支持 20MB', 'error');
+          return;
+        }
+
+        showStatus('正在上传 ' + file.name + ' ...', 'loading');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+          const res = await fetch(API_BASE + '/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!res.ok) {
+            let detail = '上传失败 (' + res.status + ')';
+            try {
+              const errData = await res.json();
+              if (errData.detail) detail = errData.detail;
+            } catch {}
+            throw new Error(detail);
+          }
+
+          const data = await res.json();
+          showStatus(
+            '上传成功！' + data.filename + '（已切分为 ' + data.chunks_count + ' 段）',
+            'success'
+          );
+          loadDocuments();
+        } catch (err) {
+          showStatus(err.message, 'error');
+        }
+      }
+
+      // ===== Delete =====
+      async function deleteDocument(docId) {
+        try {
+          const res = await fetch(API_BASE + '/' + docId, {
+            method: 'DELETE',
+          });
+          if (!res.ok) throw new Error('删除失败 (' + res.status + ')');
+          showStatus('文档已删除', 'success');
+          loadDocuments();
+        } catch (err) {
+          showStatus(err.message, 'error');
+        }
+      }
+
+      // ===== Event: Upload Zone Click =====
+      uploadZone.addEventListener('click', function() {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', function() {
+        if (fileInput.files.length > 0) {
+          uploadFile(fileInput.files[0]);
+          fileInput.value = '';
+        }
+      });
+
+      // ===== Event: Drag & Drop =====
+      uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+      });
+
+      uploadZone.addEventListener('dragleave', function() {
+        uploadZone.classList.remove('dragover');
+      });
+
+      uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+          uploadFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // ===== Event: Modal =====
+      modalCancel.addEventListener('click', function() {
+        modalOverlay.classList.remove('show');
+        pendingDeleteId = null;
+        pendingDeleteName = '';
+      });
+
+      modalConfirm.addEventListener('click', function() {
+        if (pendingDeleteId) {
+          deleteDocument(pendingDeleteId);
+        }
+        modalOverlay.classList.remove('show');
+        pendingDeleteId = null;
+        pendingDeleteName = '';
+      });
+
+      modalOverlay.addEventListener('click', function(e) {
+        if (e.target === modalOverlay) {
+          modalOverlay.classList.remove('show');
+          pendingDeleteId = null;
+          pendingDeleteName = '';
+        }
+      });
+
+      // ===== Init =====
+      loadDocuments();
+
+    })();
+  </script>
+</body>
+</html>
